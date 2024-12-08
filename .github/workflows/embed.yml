@@ -110,7 +110,7 @@ jobs:
         if: env.build == '1'
         run: |
           latestFlag=""
-          if [ "${{ env.version }}" != "${{ matrix.latest_version }}" ]; then
+          if [ "${{ matrix.version }}" != "${{ matrix.latest_version }}" ]; then
             latestFlag="--latest=false"
           fi
           gh release create ${{ env.version }} -R ${{ github.repository}} --notes "Python for Stable Release ${{ env.version }}" $latestFlag || true
