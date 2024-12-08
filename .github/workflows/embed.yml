@@ -17,7 +17,11 @@ jobs:
       - name: Get version
         run: |
           $json = Invoke-RestMethod -Uri https://github.com/docker-library/python/raw/refs/heads/master/versions.json
-          $version = $json.${{ matrix.version }}.version
+          $version = $json."${{ matrix.version }}".version
+          if (-not $version) {
+            Write-Error "Version is empty or null. Exiting."
+            exit 1
+          }
           Write-Output "version=$version" >> $env:GITHUB_ENV
           Write-Output "tag=v$version" >> $env:GITHUB_ENV
           Write-Output "Current version is $version"
