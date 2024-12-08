@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         name: [python]
-        version: ['3.11', '3.12', '3.13']
+        version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         latest_version: ['3.13']
     steps:
       - name: Get version
@@ -94,8 +94,8 @@ jobs:
       - name: Create Tag
         if: env.build == '1'
         run: |
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a ${{ env.version }} -m "Release Version ${{ env.version }}" || true
           git push origin ${{ env.version }} || true
         env:
