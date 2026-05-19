@@ -28,6 +28,7 @@ jobs:
       - name: Download and extract embedded Python
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $tag = "${{ inputs.python_tag }}"
           $embedZip = "python-$tag-embed-amd64.zip"
           $releaseUrl = "https://github.com/jumpserver-dev/Python-Embed-Win64/releases/download/$tag/$embedZip"
@@ -41,6 +42,7 @@ jobs:
       - name: Enable import site in embedded Python
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $pthFile = Get-ChildItem -Path python-embed -Filter "python*._pth" | Select-Object -First 1
           if (-not $pthFile) {
             throw "Cannot find python*._pth in python-embed"
@@ -61,6 +63,7 @@ jobs:
       - name: Install pip and requirements
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $pythonExe = (Resolve-Path "python-embed/python.exe").Path
 
           Write-Host "Downloading requirements from: ${{ inputs.requirements_url }}"
@@ -68,10 +71,14 @@ jobs:
 
           Write-Host "Installing requirements"
           & $pythonExe -m pip install -r requirements.txt
+          if ($LASTEXITCODE -ne 0) {
+            throw "pip install failed with exit code $LASTEXITCODE"
+          }
 
       - name: Pack embedded Python to zip
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $zipName = "${{ inputs.output_zip_name }}"
           if (-not $zipName.EndsWith(".zip")) {
             $zipName = "$zipName.zip"
