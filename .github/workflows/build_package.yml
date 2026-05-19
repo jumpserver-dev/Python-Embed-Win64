@@ -1,0 +1,90 @@
+name: Build Embedded Python Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      python_tag:
+        description: "Python embed release tag (example: 3.14.4)"
+        required: true
+        default: "3.14.4"
+      requirements_url:
+        description: "URL to requirements.txt"
+        required: true
+      output_zip_name:
+        description: "Output zip file name (example: python-custom.zip)"
+        required: true
+        default: "python-custom.zip"
+
+permissions:
+  contents: write
+
+jobs:
+  build-package:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Download and extract embedded Python
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.python_tag }}"
+          $embedZip = "python-$tag-embed-amd64.zip"
+          $releaseUrl = "https://github.com/jumpserver-dev/Python-Embed-Win64/releases/download/$tag/$embedZip"
+
+          Write-Host "Downloading from: $releaseUrl"
+          Invoke-WebRequest -Uri $releaseUrl -OutFile $embedZip
+
+          Expand-Archive -Path $embedZip -DestinationPath python-embed -Force
+          Write-Host "Embedded Python extracted to python-embed"
+
+      - name: Enable import site in embedded Python
+        shell: pwsh
+        run: |
+          $pthFile = Get-ChildItem -Path python-embed -Filter "python*._pth" | Select-Object -First 1
+          if (-not $pthFile) {
+            throw "Cannot find python*._pth in python-embed"
+          }
+
+          $content = Get-Content -Path $pthFile.FullName -Raw
+          if ($content -match "#import site") {
+            $content = $content -replace "#import site", "import site"
+            Set-Content -Path $pthFile.FullName -Value $content -NoNewline
+            Write-Host "Enabled import site in $($pthFile.Name)"
+          } elseif ($content -notmatch "import site") {
+            Add-Content -Path $pthFile.FullName -Value "`r`nimport site"
+            Write-Host "Added import site to $($pthFile.Name)"
+          } else {
+            Write-Host "import site already enabled"
+          }
+
+      - name: Install pip and requirements
+        shell: pwsh
+        run: |
+          $pythonExe = (Resolve-Path "python-embed/python.exe").Path
+
+          Write-Host "Downloading requirements from: ${{ inputs.requirements_url }}"
+          Invoke-WebRequest -Uri "${{ inputs.requirements_url }}" -OutFile "requirements.txt"
+
+          Write-Host "Installing requirements"
+          & $pythonExe -m pip install --upgrade pip
+          & $pythonExe -m pip install -r requirements.txt
+
+      - name: Pack embedded Python to zip
+        shell: pwsh
+        run: |
+          $zipName = "${{ inputs.output_zip_name }}"
+          if (-not $zipName.EndsWith(".zip")) {
+            $zipName = "$zipName.zip"
+          }
+
+          Compress-Archive -Path "python-embed/*" -DestinationPath $zipName -Force
+          Write-Host "Created package: $zipName"
+          "OUTPUT_ZIP=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload zip to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.python_tag }}
+          files: ${{ env.OUTPUT_ZIP }}
+          overwrite_files: true
