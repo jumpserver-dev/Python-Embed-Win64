@@ -67,7 +67,6 @@ jobs:
           Invoke-WebRequest -Uri "${{ inputs.requirements_url }}" -OutFile "requirements.txt"
 
           Write-Host "Installing requirements"
-          & $pythonExe -m pip install --upgrade pip
           & $pythonExe -m pip install -r requirements.txt
 
       - name: Pack embedded Python to zip
