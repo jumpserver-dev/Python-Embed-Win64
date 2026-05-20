@@ -75,6 +75,18 @@ jobs:
             throw "pip install failed with exit code $LASTEXITCODE"
           }
 
+      - name: Remove embedded Python path isolation from package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $pthFile = Get-ChildItem -Path python-embed -Filter "python*._pth" | Select-Object -First 1
+          if (-not $pthFile) {
+            throw "Cannot find python*._pth in python-embed"
+          }
+
+          Remove-Item -Path $pthFile.FullName -Force
+          Write-Host "Removed path isolation file from package: $($pthFile.Name)"
+
       - name: Pack embedded Python to zip
         shell: pwsh
         run: |
