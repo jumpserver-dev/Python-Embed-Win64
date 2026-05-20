@@ -84,7 +84,17 @@ jobs:
             $zipName = "$zipName.zip"
           }
 
-          Compress-Archive -Path "python-embed/*" -DestinationPath $zipName -Force
+          $stageRoot = Join-Path $PWD "__package_stage"
+          if (Test-Path $stageRoot) {
+            Remove-Item -Path $stageRoot -Recurse -Force
+          }
+
+          $pythonRoot = Join-Path $stageRoot "Python"
+          New-Item -Path $pythonRoot -ItemType Directory -Force | Out-Null
+          Copy-Item -Path "python-embed/*" -Destination $pythonRoot -Recurse -Force
+
+          Compress-Archive -Path $pythonRoot -DestinationPath $zipName -Force
+          Remove-Item -Path $stageRoot -Recurse -Force
           Write-Host "Created package: $zipName"
           "OUTPUT_ZIP=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
 
